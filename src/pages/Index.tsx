@@ -1,6 +1,7 @@
 
 import { Dashboard } from "@/components/Dashboard";
 import { Navbar } from "@/components/Navbar";
+import { NotificationService } from "@/components/NotificationService";
 
 const Index = () => {
   return (
@@ -9,6 +10,7 @@ const Index = () => {
       <div className="flex-1 container py-8">
         <Dashboard />
       </div>
+      <NotificationService />
     </div>
   );
 };

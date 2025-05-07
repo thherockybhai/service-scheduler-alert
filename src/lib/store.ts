@@ -1,12 +1,13 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { Customer, ServiceType } from "@/types/schema";
+import { Customer, ServiceType, NotificationStatus } from "@/types/schema";
 import { v4 as uuidv4 } from "uuid";
 import { addMonths, format } from "date-fns";
 
 interface StoreState {
   customers: Customer[];
   serviceTypes: ServiceType[];
+  notificationStatus: Record<string, NotificationStatus>;
   
   addCustomer: (customer: Omit<Customer, 'id' | 'createdAt' | 'updatedAt' | 'nextServiceDate'>) => void;
   removeCustomer: (id: string) => void;
@@ -16,6 +17,9 @@ interface StoreState {
   addServiceType: (name: string) => void;
   removeServiceType: (id: string) => void;
   updateServiceType: (id: string, name: string) => void;
+  
+  updateNotificationStatus: (customerId: string, status: NotificationStatus) => void;
+  getNotificationStatus: (customerId: string) => NotificationStatus;
 }
 
 // Calculate the next service date based on the service date and duration
@@ -33,6 +37,7 @@ export const useStore = create<StoreState>()(
         { id: uuidv4(), name: 'Water Filter' },
         { id: uuidv4(), name: 'UPS' },
       ],
+      notificationStatus: {},
 
       addCustomer: (customer) => {
         const now = new Date();
@@ -123,6 +128,19 @@ export const useStore = create<StoreState>()(
           return { serviceTypes: updatedTypes };
         });
       },
+      
+      updateNotificationStatus: (customerId, status) => {
+        set((state) => ({
+          notificationStatus: {
+            ...state.notificationStatus,
+            [customerId]: status
+          }
+        }));
+      },
+      
+      getNotificationStatus: (customerId) => {
+        return get().notificationStatus[customerId] || { lastSent: null, isSent: false };
+      }
     }),
     {
       name: "service-scheduler-store",
