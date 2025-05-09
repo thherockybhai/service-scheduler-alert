@@ -5,22 +5,65 @@ import { addDays, isPast, parseISO, isEqual } from "date-fns";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Customer } from "@/types/schema";
+import { supabase } from "@/lib/supabase";
+import { Settings, X } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { getTwilioConfig, updateTwilioConfig } from "@/lib/twilioConfig";
 
 interface NotificationServiceProps {
   checkInterval?: number; // Time in seconds between checks
 }
 
-export const NotificationService = ({ checkInterval = 3600 }: NotificationServiceProps) => {
+export const NotificationService = ({ checkInterval = 60 }: NotificationServiceProps) => {
   const { customers, updateNotificationStatus, getNotificationStatus } = useStore();
-  const [webhookUrl, setWebhookUrl] = useState<string>(localStorage.getItem('smsWebhookUrl') || '');
   const [isConfiguring, setIsConfiguring] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  
+  // Twilio configuration
+  const [accountSid, setAccountSid] = useState("");
+  const [authToken, setAuthToken] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
 
-  const saveWebhook = () => {
-    localStorage.setItem('smsWebhookUrl', webhookUrl);
-    setIsConfiguring(false);
-    toast.success("Webhook saved", {
-      description: "Your SMS webhook URL has been saved"
-    });
+  // Load Twilio config on component mount
+  useEffect(() => {
+    const loadTwilioConfig = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          setUserId(user.id);
+          const config = await getTwilioConfig();
+          setAccountSid(config.accountSid);
+          setAuthToken(config.authToken);
+          setPhoneNumber(config.phoneNumber);
+        }
+      } catch (error) {
+        console.error("Error loading Twilio config:", error);
+      }
+    };
+    
+    loadTwilioConfig();
+  }, []);
+
+  const saveTwilioConfig = async () => {
+    setIsLoading(true);
+    try {
+      await updateTwilioConfig({
+        accountSid,
+        authToken,
+        phoneNumber,
+      });
+      
+      setIsConfiguring(false);
+      toast.success("Twilio configuration saved", {
+        description: "Your SMS settings have been updated"
+      });
+    } catch (error) {
+      toast.error("Failed to save configuration");
+      console.error("Error saving Twilio config:", error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Function to check for upcoming service dates
@@ -50,10 +93,10 @@ export const NotificationService = ({ checkInterval = 3600 }: NotificationServic
     });
 
     // Send notifications if needed
-    if (customersNeedingNotification.length > 0 && webhookUrl) {
+    if (customersNeedingNotification.length > 0) {
       for (const customer of customersNeedingNotification) {
         try {
-          // Send SMS notification via webhook
+          // Send SMS notification via Twilio Edge Function
           await sendSMSNotification(customer);
           
           // Update notification status
@@ -70,30 +113,27 @@ export const NotificationService = ({ checkInterval = 3600 }: NotificationServic
     }
   };
 
-  // Function to send SMS via webhook (e.g., to Zapier, Twilio, etc.)
+  // Function to send SMS via Twilio (through Supabase Edge Function)
   const sendSMSNotification = async (customer: Customer) => {
-    if (!webhookUrl) {
-      console.error("SMS webhook URL not configured");
-      return;
-    }
-
     try {
-      const response = await fetch(webhookUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        mode: "no-cors", // Handle CORS for external services
-        body: JSON.stringify({
+      const config = await getTwilioConfig();
+      
+      // Call Supabase Edge Function to send SMS
+      const { data, error } = await supabase.functions.invoke('send-sms', {
+        body: {
           to: customer.phoneNumber,
           message: `Reminder: Your ${customer.serviceType} service is scheduled in 5 days on ${customer.nextServiceDate}. Please contact us if you need to reschedule.`,
-          customerName: customer.name,
-          serviceType: customer.serviceType,
-          serviceDate: customer.nextServiceDate
-        }),
+          accountSid: config.accountSid,
+          authToken: config.authToken,
+          fromNumber: config.phoneNumber
+        }
       });
 
-      return response;
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      return data;
     } catch (error) {
       console.error("Error sending SMS notification:", error);
       throw error;
@@ -102,6 +142,8 @@ export const NotificationService = ({ checkInterval = 3600 }: NotificationServic
 
   // Check for notifications periodically
   useEffect(() => {
+    if (!userId) return;
+    
     // Initial check
     checkUpcomingServices();
     
@@ -110,37 +152,76 @@ export const NotificationService = ({ checkInterval = 3600 }: NotificationServic
     
     // Clean up interval on component unmount
     return () => clearInterval(intervalId);
-  }, [customers, webhookUrl]);
+  }, [customers, userId]);
 
   if (isConfiguring) {
     return (
       <div className="fixed bottom-4 right-4 p-4 bg-white shadow-lg rounded-lg border z-50 w-80">
-        <h3 className="text-sm font-medium mb-2">Configure SMS Webhook</h3>
-        <p className="text-xs text-muted-foreground mb-2">
-          Enter your SMS service webhook URL (Twilio, Zapier, etc.)
-        </p>
-        <input 
-          type="text" 
-          value={webhookUrl} 
-          onChange={(e) => setWebhookUrl(e.target.value)}
-          className="w-full mb-2 p-2 text-sm border rounded"
-          placeholder="https://hooks.zapier.com/hooks/catch/..."
-        />
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="text-sm font-medium">Configure Twilio SMS</h3>
           <Button 
-            variant="outline" 
+            variant="ghost" 
             size="sm" 
+            className="h-8 w-8 p-0"
             onClick={() => setIsConfiguring(false)}
           >
-            Cancel
+            <X className="h-4 w-4" />
           </Button>
-          <Button 
-            variant="default" 
-            size="sm" 
-            onClick={saveWebhook}
-          >
-            Save
-          </Button>
+        </div>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-muted-foreground block mb-1">
+              Account SID
+            </label>
+            <Input 
+              type="text" 
+              value={accountSid} 
+              onChange={(e) => setAccountSid(e.target.value)}
+              className="text-sm"
+              placeholder="AC..."
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground block mb-1">
+              Auth Token
+            </label>
+            <Input 
+              type="password" 
+              value={authToken} 
+              onChange={(e) => setAuthToken(e.target.value)}
+              className="text-sm"
+              placeholder="••••••••"
+            />
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground block mb-1">
+              Phone Number
+            </label>
+            <Input 
+              type="text" 
+              value={phoneNumber} 
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              className="text-sm"
+              placeholder="+1234567890"
+            />
+          </div>
+          <div className="flex justify-end gap-2 mt-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setIsConfiguring(false)}
+            >
+              Cancel
+            </Button>
+            <Button 
+              variant="default" 
+              size="sm" 
+              onClick={saveTwilioConfig}
+              disabled={isLoading}
+            >
+              {isLoading ? "Saving..." : "Save"}
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -154,8 +235,8 @@ export const NotificationService = ({ checkInterval = 3600 }: NotificationServic
         onClick={() => setIsConfiguring(true)}
         className="flex items-center gap-2 shadow-md"
       >
-        <span className="bg-green-500 w-2 h-2 rounded-full"></span>
-        SMS Notifications
+        <Settings className="h-4 w-4" />
+        SMS Settings
       </Button>
     </div>
   );

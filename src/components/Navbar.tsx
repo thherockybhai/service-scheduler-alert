@@ -1,8 +1,24 @@
-
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import { supabase } from "@/lib/supabase";
+import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { LogOut } from "lucide-react";
 
 export function Navbar() {
+  const navigate = useNavigate();
+  
+  const handleSignOut = async () => {
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+      toast.success("Signed out successfully");
+      navigate("/signin");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to sign out");
+    }
+  };
+  
   return (
     <header className="border-b bg-white">
       <div className="container flex h-16 items-center justify-between">
@@ -17,6 +33,10 @@ export function Navbar() {
           <Link to="/add-customer">
             <Button>Add Customer</Button>
           </Link>
+          <Button variant="outline" onClick={handleSignOut} className="flex items-center gap-2">
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </Button>
         </nav>
       </div>
     </header>
