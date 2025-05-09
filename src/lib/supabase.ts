@@ -1,14 +1,13 @@
 
 import { createClient } from '@supabase/supabase-js';
 
-// Use environment variables when available, fallback to placeholders for development
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project-url.supabase.co';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key';
+// Use the actual Supabase URL and anon key for the connected project
+const supabaseUrl = 'https://reelifhkeylkqsxibsjv.supabase.co';
+const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJlZWxpZmhrZXlsa3FzeGlic2p2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDY2MTk2MzYsImV4cCI6MjA2MjE5NTYzNn0.8sLRjIgPFswGctGxFrfkIIBIYAOJViodRK7nDpFc46Q';
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 // Function to check if Supabase is properly configured
 export const isSupabaseConfigured = () => {
-  return supabaseUrl !== 'https://your-project-url.supabase.co' && 
-         supabaseAnonKey !== 'your-anon-key';
+  return true; // Since we now have hardcoded valid credentials
 };

@@ -1,40 +1,21 @@
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle } from "lucide-react";
+import { supabase } from "@/lib/supabase";
 
 const SignUp = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isConfigured, setIsConfigured] = useState(true);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    // Check if Supabase is properly configured
-    setIsConfigured(isSupabaseConfigured());
-    
-    if (!isSupabaseConfigured()) {
-      toast.error("Supabase configuration is missing", {
-        description: "Please connect your Lovable project to Supabase using the green button in the top right corner."
-      });
-    }
-  }, []);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!isConfigured) {
-      toast.error("Cannot sign up without Supabase configuration");
-      return;
-    }
     
     if (!email || !password || !confirmPassword) {
       toast.error("Please fill in all fields");
@@ -53,7 +34,7 @@ const SignUp = () => {
 
     setLoading(true);
     try {
-      console.log("Attempting to sign up with:", { email, supabaseConfigured: isConfigured });
+      console.log("Attempting to sign up with:", { email });
       
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -83,16 +64,6 @@ const SignUp = () => {
             Sign up to manage your service schedule
           </CardDescription>
         </CardHeader>
-        {!isConfigured && (
-          <div className="px-6">
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>
-                Supabase connection not configured. Please connect your project to Supabase using the green button in the top right.
-              </AlertDescription>
-            </Alert>
-          </div>
-        )}
         <form onSubmit={handleSignUp}>
           <CardContent className="space-y-4">
             <div className="space-y-2">
@@ -139,7 +110,7 @@ const SignUp = () => {
             <Button 
               type="submit" 
               className="w-full" 
-              disabled={loading || !isConfigured}
+              disabled={loading}
             >
               {loading ? "Creating Account..." : "Create Account"}
             </Button>

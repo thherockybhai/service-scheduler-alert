@@ -1,22 +1,13 @@
 
 import { useEffect, useState } from "react";
 import { Navigate, Outlet } from "react-router-dom";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 
 export const AuthGuard = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null);
   
   useEffect(() => {
-    // Check if Supabase is properly configured
-    if (!isSupabaseConfigured()) {
-      toast.error("Supabase configuration is missing", {
-        description: "Please connect your Lovable project to Supabase using the green button in the top right corner."
-      });
-      setIsAuthenticated(false);
-      return;
-    }
-    
     const checkAuth = async () => {
       try {
         const { data, error } = await supabase.auth.getUser();
