@@ -2,6 +2,7 @@
 import { useState, useMemo } from "react";
 import { useStore } from "@/lib/store";
 import { CustomersTable } from "@/components/CustomersTable";
+import { ExpiryChecker } from "@/components/ExpiryChecker";
 import {
   Card,
   CardContent,
@@ -10,10 +11,13 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
+import { TableIcon, CalendarClock } from "lucide-react";
 
 export function Dashboard() {
   const { customers, serviceTypes } = useStore();
+  const [showExpiryChecker, setShowExpiryChecker] = useState(false);
   
   // Prepare data for the pie chart
   const chartData = useMemo(() => {
@@ -111,7 +115,24 @@ export function Dashboard() {
         </Card>
       </div>
 
-      {customers.length > 0 && (
+      <div className="flex flex-wrap gap-2">
+        <Button 
+          variant={!showExpiryChecker ? "default" : "outline"} 
+          onClick={() => setShowExpiryChecker(false)}
+        >
+          <TableIcon className="mr-1 h-4 w-4" />
+          Customers Table
+        </Button>
+        <Button 
+          variant={showExpiryChecker ? "default" : "outline"} 
+          onClick={() => setShowExpiryChecker(true)}
+        >
+          <CalendarClock className="mr-1 h-4 w-4" />
+          Expiry Checker
+        </Button>
+      </div>
+
+      {customers.length > 0 && !showExpiryChecker && (
         <Card className="hidden md:block">
           <CardHeader>
             <CardTitle>Service Type Distribution</CardTitle>
@@ -145,7 +166,7 @@ export function Dashboard() {
         </Card>
       )}
       
-      <CustomersTable />
+      {showExpiryChecker ? <ExpiryChecker /> : <CustomersTable />}
     </div>
   );
 }
