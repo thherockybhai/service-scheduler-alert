@@ -2,8 +2,9 @@
 import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
 import { addDays, isPast, parseISO, isEqual } from "date-fns";
-import { toast } from "@/components/ui/sonner";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Customer } from "@/types/schema";
 
 interface NotificationServiceProps {
   checkInterval?: number; // Time in seconds between checks
@@ -17,9 +18,8 @@ export const NotificationService = ({ checkInterval = 3600 }: NotificationServic
   const saveWebhook = () => {
     localStorage.setItem('smsWebhookUrl', webhookUrl);
     setIsConfiguring(false);
-    toast({
-      title: "Webhook saved",
-      description: "Your SMS webhook URL has been saved",
+    toast.success("Webhook saved", {
+      description: "Your SMS webhook URL has been saved"
     });
   };
 

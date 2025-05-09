@@ -6,6 +6,7 @@ export interface Customer {
   serviceType: string;
   serviceDate: string;
   serviceDuration: number;
+  serviceDurationUnit: "days" | "months" | "years";
   nextServiceDate: string;
   createdAt: string;
   updatedAt: string;

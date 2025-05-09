@@ -1,8 +1,9 @@
+
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { Customer, ServiceType, NotificationStatus } from "@/types/schema";
 import { v4 as uuidv4 } from "uuid";
-import { addMonths, format } from "date-fns";
+import { addDays, addMonths, addYears, format } from "date-fns";
 
 interface StoreState {
   customers: Customer[];
@@ -22,10 +23,20 @@ interface StoreState {
   getNotificationStatus: (customerId: string) => NotificationStatus;
 }
 
-// Calculate the next service date based on the service date and duration
-const calculateNextServiceDate = (serviceDate: string, serviceDuration: number): string => {
+// Calculate the next service date based on the service date, duration, and duration unit
+const calculateNextServiceDate = (serviceDate: string, serviceDuration: number, serviceDurationUnit: "days" | "months" | "years"): string => {
   const date = new Date(serviceDate);
-  return format(addMonths(date, serviceDuration), 'yyyy-MM-dd');
+  
+  switch (serviceDurationUnit) {
+    case "days":
+      return format(addDays(date, serviceDuration), 'yyyy-MM-dd');
+    case "months":
+      return format(addMonths(date, serviceDuration), 'yyyy-MM-dd');
+    case "years":
+      return format(addYears(date, serviceDuration), 'yyyy-MM-dd');
+    default:
+      return format(addMonths(date, serviceDuration), 'yyyy-MM-dd');
+  }
 };
 
 export const useStore = create<StoreState>()(
@@ -43,7 +54,8 @@ export const useStore = create<StoreState>()(
         const now = new Date();
         const nextServiceDate = calculateNextServiceDate(
           customer.serviceDate, 
-          customer.serviceDuration
+          customer.serviceDuration,
+          customer.serviceDurationUnit
         );
 
         const newCustomer: Customer = {
@@ -73,18 +85,21 @@ export const useStore = create<StoreState>()(
           
           const customer = state.customers[customerIndex];
           
-          // Calculate next service date if service date or duration changes
+          // Calculate next service date if service date, duration, or duration unit changes
           let nextServiceDate = customer.nextServiceDate;
           if (
             (updatedCustomer.serviceDate && updatedCustomer.serviceDate !== customer.serviceDate) ||
             (updatedCustomer.serviceDuration !== undefined && 
-             updatedCustomer.serviceDuration !== customer.serviceDuration)
+             updatedCustomer.serviceDuration !== customer.serviceDuration) ||
+            (updatedCustomer.serviceDurationUnit && 
+             updatedCustomer.serviceDurationUnit !== customer.serviceDurationUnit)
           ) {
             nextServiceDate = calculateNextServiceDate(
               updatedCustomer.serviceDate || customer.serviceDate,
               updatedCustomer.serviceDuration !== undefined 
                 ? updatedCustomer.serviceDuration 
-                : customer.serviceDuration
+                : customer.serviceDuration,
+              updatedCustomer.serviceDurationUnit || customer.serviceDurationUnit
             );
           }
           

@@ -10,7 +10,7 @@ const Index = () => {
       <div className="flex-1 container py-8">
         <Dashboard />
       </div>
-      <NotificationService />
+      <NotificationService checkInterval={60} /> {/* Set to check every 60 seconds for testing */}
     </div>
   );
 };

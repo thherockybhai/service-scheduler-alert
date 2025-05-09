@@ -52,7 +52,10 @@ const formSchema = z.object({
   serviceDate: z.date({
     required_error: "Service date is required",
   }),
-  serviceDuration: z.coerce.number().int().min(1, "Duration must be at least 1 month"),
+  serviceDuration: z.coerce.number().int().min(1, "Duration must be at least 1"),
+  serviceDurationUnit: z.enum(["days", "months", "years"], {
+    required_error: "Duration unit is required",
+  }),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -71,6 +74,7 @@ export function AddCustomerForm() {
       phoneNumber: "",
       serviceType: "",
       serviceDuration: 6,
+      serviceDurationUnit: "months",
     },
   });
 
@@ -99,6 +103,7 @@ export function AddCustomerForm() {
       serviceType: data.serviceType,
       serviceDate: format(data.serviceDate, "yyyy-MM-dd"),
       serviceDuration: data.serviceDuration,
+      serviceDurationUnit: data.serviceDurationUnit,
     });
 
     toast({
@@ -267,34 +272,56 @@ export function AddCustomerForm() {
             />
           </div>
 
-          <FormField
-            control={form.control}
-            name="serviceDuration"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Service Duration (months)</FormLabel>
-                <div className="flex items-center gap-2">
+          <div className="grid gap-4 grid-cols-3">
+            <FormField
+              control={form.control}
+              name="serviceDuration"
+              render={({ field }) => (
+                <FormItem className="col-span-2">
+                  <FormLabel>Service Duration</FormLabel>
                   <FormControl>
                     <Input
                       type="number"
                       {...field}
                       min={1}
-                      max={36}
                       onChange={(e) => {
                         const value = parseInt(e.target.value);
                         field.onChange(isNaN(value) ? 6 : value);
                       }}
                     />
                   </FormControl>
-                  <span className="text-sm text-muted-foreground">months</span>
-                </div>
-                <FormDescription>
-                  How often the service needs to be performed (default is 6 months)
-                </FormDescription>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <FormField
+              control={form.control}
+              name="serviceDurationUnit"
+              render={({ field }) => (
+                <FormItem className="col-span-1">
+                  <FormLabel>Unit</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select unit" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="days">Days (D)</SelectItem>
+                      <SelectItem value="months">Months (M)</SelectItem>
+                      <SelectItem value="years">Years (Y)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+          
+          <FormDescription>
+            How often the service needs to be performed (default is 6 months)
+          </FormDescription>
           
           <div className="flex justify-end">
             <Button type="submit">
