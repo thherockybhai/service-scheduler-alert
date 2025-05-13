@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
 import { addDays, isPast, parseISO, isEqual, format } from "date-fns";
@@ -188,6 +187,7 @@ export const NotificationService = ({ checkInterval = 60 }: NotificationServiceP
   }, [customers, userId]);
 
   // Add capability to trigger completion SMS manually
+  // Properly typed with the window interface extension in vite-env.d.ts
   window.sendServiceCompletionSMS = async (customerId: string) => {
     const customer = customers.find(c => c.id === customerId);
     if (customer) {
