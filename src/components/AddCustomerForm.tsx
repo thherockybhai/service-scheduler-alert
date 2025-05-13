@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
@@ -40,6 +40,7 @@ import {
 } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/lib/supabase";
 
 const phoneRegex = /^\d{10}$/;
 
@@ -63,10 +64,12 @@ type FormData = z.infer<typeof formSchema>;
 export function AddCustomerForm() {
   const [newServiceType, setNewServiceType] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
   const { serviceTypes, addServiceType, addCustomer } = useStore();
   const { toast } = useToast();
   const navigate = useNavigate();
-
+  
+  // Initialize the form with defaults
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -78,6 +81,33 @@ export function AddCustomerForm() {
     },
   });
 
+  // Check if user is authenticated to prevent Row Level Security issues
+  useEffect(() => {
+    const checkAuth = async () => {
+      setLoading(true);
+      const { data } = await supabase.auth.getUser();
+      if (!data.user) {
+        toast({
+          title: "Authentication required",
+          description: "Please sign in to add customers",
+          variant: "destructive",
+        });
+        navigate("/signin");
+      }
+      setLoading(false);
+    };
+    
+    checkAuth();
+  }, [navigate, toast]);
+
+  // Fetch service types if they're empty (handles initial load)
+  useEffect(() => {
+    if (serviceTypes.length === 0) {
+      // This will trigger syncWithSupabase which will fetch service types
+      useStore.getState().syncWithSupabase();
+    }
+  }, [serviceTypes.length]);
+  
   const handleSubmitServiceType = () => {
     if (newServiceType.trim()) {
       addServiceType(newServiceType.trim());
@@ -113,6 +143,10 @@ export function AddCustomerForm() {
     
     navigate("/");
   };
+
+  if (loading) {
+    return <div className="text-center py-8">Loading...</div>;
+  }
 
   return (
     <div className="space-y-6">
@@ -181,16 +215,23 @@ export function AddCustomerForm() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {serviceTypes.map((type) => (
-                        <SelectItem key={type.id} value={type.name}>
-                          {type.name}
+                      {serviceTypes.length > 0 ? (
+                        serviceTypes.map((type) => (
+                          <SelectItem key={type.id} value={type.name}>
+                            {type.name}
+                          </SelectItem>
+                        ))
+                      ) : (
+                        <SelectItem value="" disabled>
+                          No service types available
                         </SelectItem>
-                      ))}
+                      )}
                       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                         <DialogTrigger asChild>
                           <Button
                             variant="ghost"
                             className="w-full justify-start text-left font-normal"
+                            type="button"
                           >
                             <PlusIcon className="mr-2 h-4 w-4" />
                             Add new service type
@@ -207,7 +248,10 @@ export function AddCustomerForm() {
                                 value={newServiceType}
                                 onChange={(e) => setNewServiceType(e.target.value)}
                               />
-                              <Button onClick={handleSubmitServiceType}>
+                              <Button 
+                                onClick={handleSubmitServiceType}
+                                type="button"
+                              >
                                 Add
                               </Button>
                             </div>
@@ -237,6 +281,7 @@ export function AddCustomerForm() {
                               "w-full pl-3 text-left font-normal",
                               !field.value && "text-muted-foreground"
                             )}
+                            type="button"
                           >
                             {field.value ? (
                               format(field.value, "PPP")
@@ -308,9 +353,9 @@ export function AddCustomerForm() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="days">Days (D)</SelectItem>
-                      <SelectItem value="months">Months (M)</SelectItem>
-                      <SelectItem value="years">Years (Y)</SelectItem>
+                      <SelectItem value="days">Days</SelectItem>
+                      <SelectItem value="months">Months</SelectItem>
+                      <SelectItem value="years">Years</SelectItem>
                     </SelectContent>
                   </Select>
                   <FormMessage />
