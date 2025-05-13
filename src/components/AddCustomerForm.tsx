@@ -222,7 +222,8 @@ export function AddCustomerForm() {
                           </SelectItem>
                         ))
                       ) : (
-                        <SelectItem value="" disabled>
+                        // Fixed: Using a non-empty placeholder value instead of an empty string
+                        <SelectItem value="no-service-types" disabled>
                           No service types available
                         </SelectItem>
                       )}
