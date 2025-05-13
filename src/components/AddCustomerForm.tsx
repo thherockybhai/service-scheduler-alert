@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -60,6 +61,9 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
+// Default service types that should always be available
+const DEFAULT_SERVICE_TYPES = ["UPS", "Water Filter", "Solar"];
+
 export function AddCustomerForm() {
   const [newServiceType, setNewServiceType] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -102,12 +106,11 @@ export function AddCustomerForm() {
   // Ensure default service types exist
   useEffect(() => {
     const initServiceTypes = async () => {
-      const defaultTypes = ["UPS", "Water Filter", "Solar"];
       // Get the current service types
       const currentTypes = useStore.getState().serviceTypes.map(type => type.name);
       
       // Add any default types that don't already exist
-      for (const type of defaultTypes) {
+      for (const type of DEFAULT_SERVICE_TYPES) {
         if (!currentTypes.includes(type)) {
           await useStore.getState().addServiceType(type);
         }
@@ -115,7 +118,7 @@ export function AddCustomerForm() {
       
       // Set initial service type if none selected
       if (!form.getValues('serviceType') && serviceTypes.length > 0) {
-        form.setValue('serviceType', serviceTypes[0].name);
+        form.setValue('serviceType', DEFAULT_SERVICE_TYPES[0]);
       }
     };
 
@@ -237,17 +240,24 @@ export function AddCustomerForm() {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {serviceTypes.length > 0 ? (
-                        serviceTypes.map((type) => (
+                      {/* Always show the default service types first */}
+                      {DEFAULT_SERVICE_TYPES.map((type) => (
+                        <SelectItem key={`default-${type}`} value={type}>
+                          {type}
+                        </SelectItem>
+                      ))}
+                      
+                      {/* Show custom service types (excluding defaults to avoid duplicates) */}
+                      {serviceTypes
+                        .filter(type => !DEFAULT_SERVICE_TYPES.includes(type.name))
+                        .map((type) => (
                           <SelectItem key={type.id} value={type.name}>
                             {type.name}
                           </SelectItem>
                         ))
-                      ) : (
-                        <SelectItem value="default-placeholder" disabled>
-                          No service types available
-                        </SelectItem>
-                      )}
+                      }
+                      
+                      {/* Add new service type option */}
                       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                         <DialogTrigger asChild>
                           <Button
