@@ -1,7 +1,7 @@
 
 import { useEffect, useState } from "react";
 import { useStore } from "@/lib/store";
-import { addDays, isPast, parseISO, isEqual } from "date-fns";
+import { addDays, isPast, parseISO, isEqual, format } from "date-fns";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Customer } from "@/types/schema";
@@ -96,8 +96,17 @@ export const NotificationService = ({ checkInterval = 60 }: NotificationServiceP
     if (customersNeedingNotification.length > 0) {
       for (const customer of customersNeedingNotification) {
         try {
-          // Send SMS notification via Twilio Edge Function
-          await sendSMSNotification(customer);
+          // Format the next service date for the SMS
+          const formattedNextServiceDate = format(
+            parseISO(customer.nextServiceDate),
+            "MMMM dd, yyyy"
+          );
+          
+          // Create reminder message with new format
+          const message = `Hey, Your ${customer.serviceType} service is scheduled on ${formattedNextServiceDate}`;
+          
+          // Send SMS notification
+          await sendSMSNotification(customer, message);
           
           // Update notification status
           updateNotificationStatus(customer.id, {
@@ -106,15 +115,39 @@ export const NotificationService = ({ checkInterval = 60 }: NotificationServiceP
           });
           
           console.log(`Notification sent to ${customer.name}`);
+          toast.success(`Notification sent to ${customer.name}`);
         } catch (error) {
           console.error(`Failed to send notification to ${customer.name}:`, error);
+          toast.error(`Failed to send notification to ${customer.name}`);
         }
       }
     }
   };
 
+  // Function to send SMS for completed service
+  const sendCompletionSMS = async (customer: Customer) => {
+    try {
+      // Format the next service date for the SMS
+      const formattedNextServiceDate = format(
+        parseISO(customer.nextServiceDate),
+        "MMMM dd, yyyy"
+      );
+      
+      // Create completion message with new format
+      const message = `Hey, Thank you for choosing Kitkat! Service for ${customer.serviceType} is done and the next Service date is ${formattedNextServiceDate}. Have a great day!`;
+      
+      // Send SMS notification
+      await sendSMSNotification(customer, message);
+      
+      toast.success(`Service completion notification sent to ${customer.name}`);
+    } catch (error) {
+      console.error(`Failed to send completion notification to ${customer.name}:`, error);
+      toast.error(`Failed to send completion notification to ${customer.name}`);
+    }
+  };
+
   // Function to send SMS via Twilio (through Supabase Edge Function)
-  const sendSMSNotification = async (customer: Customer) => {
+  const sendSMSNotification = async (customer: Customer, message: string) => {
     try {
       const config = await getTwilioConfig();
       
@@ -122,7 +155,7 @@ export const NotificationService = ({ checkInterval = 60 }: NotificationServiceP
       const { data, error } = await supabase.functions.invoke('send-sms', {
         body: {
           to: customer.phoneNumber,
-          message: `Reminder: Your ${customer.serviceType} service is scheduled in 5 days on ${customer.nextServiceDate}. Please contact us if you need to reschedule.`,
+          message: message,
           accountSid: config.accountSid,
           authToken: config.authToken,
           fromNumber: config.phoneNumber
@@ -153,6 +186,16 @@ export const NotificationService = ({ checkInterval = 60 }: NotificationServiceP
     // Clean up interval on component unmount
     return () => clearInterval(intervalId);
   }, [customers, userId]);
+
+  // Add capability to trigger completion SMS manually
+  window.sendServiceCompletionSMS = async (customerId: string) => {
+    const customer = customers.find(c => c.id === customerId);
+    if (customer) {
+      await sendCompletionSMS(customer);
+    } else {
+      console.error(`Customer with ID ${customerId} not found`);
+    }
+  };
 
   if (isConfiguring) {
     return (

@@ -9,7 +9,122 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      [_ in never]: never
+      customers: {
+        Row: {
+          created_at: string | null
+          id: string
+          name: string
+          next_service_date: string
+          phone_number: string
+          service_date: string
+          service_duration: number
+          service_duration_unit: string
+          service_type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          name: string
+          next_service_date: string
+          phone_number: string
+          service_date: string
+          service_duration: number
+          service_duration_unit: string
+          service_type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          name?: string
+          next_service_date?: string
+          phone_number?: string
+          service_date?: string
+          service_duration?: number
+          service_duration_unit?: string
+          service_type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      notification_status: {
+        Row: {
+          customer_id: string
+          id: string
+          is_sent: boolean | null
+          last_sent: string | null
+          user_id: string
+        }
+        Insert: {
+          customer_id: string
+          id?: string
+          is_sent?: boolean | null
+          last_sent?: string | null
+          user_id: string
+        }
+        Update: {
+          customer_id?: string
+          id?: string
+          is_sent?: boolean | null
+          last_sent?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_status_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_types: {
+        Row: {
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          user_id: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      twilio_configs: {
+        Row: {
+          account_sid: string
+          auth_token: string
+          id: string
+          phone_number: string
+          user_id: string
+        }
+        Insert: {
+          account_sid: string
+          auth_token: string
+          id?: string
+          phone_number: string
+          user_id: string
+        }
+        Update: {
+          account_sid?: string
+          auth_token?: string
+          id?: string
+          phone_number?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
