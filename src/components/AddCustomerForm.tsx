@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { useNavigate } from "react-router-dom";
@@ -100,13 +99,36 @@ export function AddCustomerForm() {
     checkAuth();
   }, [navigate, toast]);
 
-  // Fetch service types if they're empty (handles initial load)
+  // Ensure default service types exist
   useEffect(() => {
+    const initServiceTypes = async () => {
+      const defaultTypes = ["UPS", "Water Filter", "Solar"];
+      // Get the current service types
+      const currentTypes = useStore.getState().serviceTypes.map(type => type.name);
+      
+      // Add any default types that don't already exist
+      for (const type of defaultTypes) {
+        if (!currentTypes.includes(type)) {
+          await useStore.getState().addServiceType(type);
+        }
+      }
+      
+      // Set initial service type if none selected
+      if (!form.getValues('serviceType') && serviceTypes.length > 0) {
+        form.setValue('serviceType', serviceTypes[0].name);
+      }
+    };
+
+    // If serviceTypes is empty, sync with Supabase first, then initialize defaults
     if (serviceTypes.length === 0) {
-      // This will trigger syncWithSupabase which will fetch service types
-      useStore.getState().syncWithSupabase();
+      useStore.getState().syncWithSupabase().then(() => {
+        initServiceTypes();
+      });
+    } else {
+      // If we already have service types, just ensure defaults exist
+      initServiceTypes();
     }
-  }, [serviceTypes.length]);
+  }, [serviceTypes, form]);
   
   const handleSubmitServiceType = () => {
     if (newServiceType.trim()) {
@@ -222,8 +244,7 @@ export function AddCustomerForm() {
                           </SelectItem>
                         ))
                       ) : (
-                        // Fixed: Using a non-empty placeholder value instead of an empty string
-                        <SelectItem value="no-service-types" disabled>
+                        <SelectItem value="default-placeholder" disabled>
                           No service types available
                         </SelectItem>
                       )}
